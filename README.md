@@ -1,1 +1,0 @@
-# Trabalho-final---GCES-2022
