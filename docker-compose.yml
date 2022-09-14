@@ -1,0 +1,68 @@
+services:
+  db:
+    container_name: db
+    networks:
+      - gces
+    image: postgres:latest
+    volumes:
+      - ./data/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    restart: always
+
+  library_back:
+    container_name: library_back
+    networks:
+      - gces
+    build: ./library_back
+    command: bash -c "python manage.py makemigrations && 
+                      python manage.py migrate && 
+                      python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/library_back
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+    restart: always
+    depends_on:
+      - db
+    
+  library_front:
+    container_name: library_front
+    networks:
+      - gces
+    build: ./library_front
+    command : bash -c "npm run build &&
+                       npm install -g serve &&
+                       serve -s build"
+    volumes:
+      - .:/library_front
+    ports:
+      - "3000:3000"
+    restart: always
+    depends_on:
+      - library_back
+  
+  nginx:
+    container_name: nginx
+    networks:
+      - gces
+    image: nginx:latest
+    volumes:
+      - ./nginx/nginx-setup.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./library_front
+    ports:
+    - '80:80'
+    depends_on:
+    - library_front
+
+networks:
+  gces:
+    driver: bridge
